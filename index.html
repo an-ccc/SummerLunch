@@ -19,6 +19,9 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- SheetJS CDN - 100% 瀏覽器端純前端 Excel 生成引擎 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans">
 
@@ -134,9 +137,9 @@
 
     const ExternalLinkIcon = ({ className }) => (
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-        <polyline points="15 3 21 3 21 9" />
-        <line x1="10" y1="14" x2="21" y2="3" />
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
       </svg>
     );
 
@@ -150,6 +153,14 @@
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="12" y1="1" x2="12" y2="23" />
         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    );
+
+    const DownloadIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
       </svg>
     );
 
@@ -835,13 +846,13 @@
             try {
               const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
               await configDocRef.set({ dailyMenus: updatedDailyMenus }, { merge: true });
-              showToast(`已成功手動加入當日專屬推薦品項`, "success");
+              showToast("已成功手動加入當日專屬推薦品項", "success");
             } catch (err) {
               showToast("加入失敗", "error");
             }
           } else {
             setDailyMenus(updatedDailyMenus);
-            showToast(`已成功手動加入當日專屬推薦品項 (模擬)`, "success");
+            showToast("已成功手動加入當日專屬推薦品項 (模擬)", "success");
           }
         }
       };
@@ -975,6 +986,175 @@
         }, 0);
       }, [filteredOrders]);
 
+      // ==========================================
+      // EXCEL EXPORT POWER ENGINE FUNCTIONS (純前端生成多工作表 Excel 核心邏輯)
+      // ==========================================
+
+      // 1. 導出品項統計 Excel
+      const handleExportItemStatistics = () => {
+        try {
+          if (itemStatistics.length === 0) {
+            showToast("當前無品項數據可供導出！", "error");
+            return;
+          }
+          const formattedData = itemStatistics.map(stat => ({
+            "品項名稱": stat.name,
+            "單價 (TWD)": stat.unitPrice,
+            "訂購數量 (份)": stat.totalQty,
+            "金額小計 (元)": stat.totalPrice
+          }));
+
+          const worksheet = XLSX.utils.json_to_sheet(formattedData);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "品項統計");
+          
+          const filterDisplay = statsDateFilter === 'all' ? '所有日期' : statsDateFilter;
+          XLSX.writeFile(workbook, `暑期午餐_店家叫餐統計_${filterDisplay}.xlsx`);
+          showToast("🎉 已成功導出品項叫餐統計 Excel！", "success");
+        } catch (e) {
+          console.error(e);
+          showToast("導出失敗，請確認瀏覽器支援！", "error");
+        }
+      };
+
+      // 2. 導出個人帳單明細 Excel
+      const handleExportPersonalBilling = () => {
+        try {
+          if (personalBilling.length === 0) {
+            showToast("當前無帳單數據可供導出！", "error");
+            return;
+          }
+          const formattedData = [];
+          personalBilling.forEach(userBill => {
+            JULY_DATES.forEach(dateObj => {
+              const dayRecord = userBill.dates[dateObj.dateStr];
+              if (dayRecord) {
+                formattedData.push({
+                  "姓名": userBill.name,
+                  "點餐日期": dateObj.display,
+                  "點餐明細": dayRecord.description,
+                  "客製備註": dayRecord.remarks || "無",
+                  "單日金額 (元)": dayRecord.cost
+                });
+              }
+            });
+            // 插入小計列，方便核對
+            formattedData.push({
+              "姓名": `${userBill.name} (個人暑期加總)`,
+              "點餐日期": "---",
+              "點餐明細": "---",
+              "客製備註": "---",
+              "單日金額 (元)": userBill.totalSpent
+            });
+            formattedData.push({}); // 空白間隔列，更易閱讀
+          });
+
+          const worksheet = XLSX.utils.json_to_sheet(formattedData);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "個人暑期對帳單");
+          XLSX.writeFile(workbook, `暑期午餐_個人帳單明細總計.xlsx`);
+          showToast("🎉 已成功導出個人午餐對帳單 Excel！", "success");
+        } catch (e) {
+          console.error(e);
+          showToast("導出失敗，請確認瀏覽器設定！", "error");
+        }
+      };
+
+      // 3. 導出原始訂單明細 Excel
+      const handleExportRawOrders = () => {
+        try {
+          if (filteredOrders.length === 0) {
+            showToast("當前無原始訂單數據可供導出！", "error");
+            return;
+          }
+          const formattedData = filteredOrders.map(order => {
+            const dateDisplay = JULY_DATES.find(d => d.dateStr === order.date)?.display || order.date;
+            return {
+              "訂單編號/ID": order.id,
+              "姓名": order.name,
+              "點餐日期": dateDisplay,
+              "點餐細項": order.items.map(i => `${i.name} (${i.qty}份)`).join(', '),
+              "客製備註": order.remarks || "無",
+              "總金額 (元)": order.items.reduce((sum, i) => sum + (i.price * i.qty), 0)
+            };
+          });
+
+          const worksheet = XLSX.utils.json_to_sheet(formattedData);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "原始訂單清單");
+          XLSX.writeFile(workbook, `暑期午餐_原始訂單明細_${statsDateFilter}.xlsx`);
+          showToast("🎉 已成功導出原始點餐明細 Excel！", "success");
+        } catch (e) {
+          console.error(e);
+          showToast("導出失敗，請確認檔案存取權限！", "error");
+        }
+      };
+
+      // 4. 一鍵打包導出「多工作表 (Multi-sheet) 完整統計 Excel 報表」
+      const handleExportCompleteReport = () => {
+        try {
+          const workbook = XLSX.utils.book_new();
+          const filterDisplay = statsDateFilter === 'all' ? '所有日期' : statsDateFilter;
+
+          // (1) 工作表 1：店家叫餐統計
+          const table1Data = itemStatistics.map(stat => ({
+            "品項名稱": stat.name,
+            "單價 (TWD)": stat.unitPrice,
+            "訂購數量 (份)": stat.totalQty,
+            "金額小計 (元)": stat.totalPrice
+          }));
+          const ws1 = XLSX.utils.json_to_sheet(table1Data);
+          XLSX.utils.book_append_sheet(workbook, ws1, "一、店家叫餐統計");
+
+          // (2) 工作表 2：個人午餐對帳累計
+          const table2Data = [];
+          personalBilling.forEach(userBill => {
+            JULY_DATES.forEach(dateObj => {
+              const dayRecord = userBill.dates[dateObj.dateStr];
+              if (dayRecord) {
+                table2Data.push({
+                  "姓名": userBill.name,
+                  "點餐日期": dateObj.display,
+                  "點餐明細": dayRecord.description,
+                  "客製備註": dayRecord.remarks || "無",
+                  "單日金額 (元)": dayRecord.cost
+                });
+              }
+            });
+            table2Data.push({
+              "姓名": `${userBill.name} (個人累計金額)`,
+              "點餐日期": "---",
+              "點餐明細": "---",
+              "客製備註": "---",
+              "單日金額 (元)": userBill.totalSpent
+            });
+            table2Data.push({});
+          });
+          const ws2 = XLSX.utils.json_to_sheet(table2Data);
+          XLSX.utils.book_append_sheet(workbook, ws2, "二、個人帳單累計對帳");
+
+          // (3) 工作表 3：全原始點餐明細
+          const table3Data = filteredOrders.map(order => {
+            const dateDisplay = JULY_DATES.find(d => d.dateStr === order.date)?.display || order.date;
+            return {
+              "姓名": order.name,
+              "點餐日期": dateDisplay,
+              "點餐細項": order.items.map(i => `${i.name} (${i.qty}份)`).join(', '),
+              "客製備註": order.remarks || "無",
+              "總金額 (元)": order.items.reduce((sum, i) => sum + (i.price * i.qty), 0)
+            };
+          });
+          const ws3 = XLSX.utils.json_to_sheet(table3Data);
+          XLSX.utils.book_append_sheet(workbook, ws3, "三、原始訂單流水帳");
+
+          XLSX.writeFile(workbook, `暑期點餐系統_完整導出報表_${filterDisplay}.xlsx`);
+          showToast("🚀 成功下載完整合一多工作表 Excel 報表！", "success");
+        } catch (e) {
+          console.error(e);
+          showToast("導出多工作表失敗，請重新嘗試！", "error");
+        }
+      };
+
       return (
         <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
           
@@ -1074,7 +1254,7 @@
                   <div>
                     <h3 className="text-amber-900 font-bold text-lg">今日推薦菜單 (雲端試算表)</h3>
                     <p className="text-amber-700 text-sm mt-0.5">
-                      您可以點擊右側按鈕打開 Google 試算表，檢查菜單格式和內容。
+                      您可以點擊右側按鈕打開 Google 試算表，檢查菜單格式 and 內容。
                     </p>
                   </div>
                 </div>
@@ -1460,6 +1640,8 @@
                   </div>
                 ) : (
                   <div className="space-y-8 animate-fadeIn">
+                    
+                    {/* Admin Title Bar */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-6">
                       <div>
                         <h2 className="text-2xl font-black text-slate-900 flex items-center space-x-2">
@@ -1468,15 +1650,27 @@
                         </h2>
                         <p className="text-slate-500 text-xs mt-1">在此管理雲端菜單、預設快速品項，並查看所有人跨日期訂購金額總計。</p>
                       </div>
-                      <button
-                        onClick={() => {
-                          setAdminUnlocked(false);
-                          setEnteredPassword('');
-                        }}
-                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-colors"
-                      >
-                        重新上鎖
-                      </button>
+                      
+                      {/* 右上角快捷功能區 */}
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={handleExportCompleteReport}
+                          className="flex items-center space-x-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-emerald-600/10"
+                        >
+                          <DownloadIcon className="h-4 w-4" />
+                          <span>一鍵匯出完整報表 (多工作表 Excel)</span>
+                        </button>
+                        
+                        <button
+                          onClick={() => {
+                            setAdminUnlocked(false);
+                            setEnteredPassword('');
+                          }}
+                          className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-colors"
+                        >
+                          重新上鎖
+                        </button>
+                      </div>
                     </div>
 
                     {/* Overviews */}
@@ -1651,7 +1845,7 @@
                           {/* 顯示目前選定菜單的餐點 */}
                           {adminDisplayItems.length === 0 ? (
                             <p className="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-100">
-                              目前此菜單是空的。請在上方「智慧同步」或在下方手動追加！
+                              目 前此菜單是空的。請在上方「智慧同步」或在下方手動追加！
                             </p>
                           ) : (
                             <div className="divide-y divide-slate-100 max-h-56 overflow-y-auto pr-1">
@@ -1707,9 +1901,16 @@
                               <TrendingUpIcon className="h-5 w-5 text-orange-500" />
                               <span>一、店家訂購品項總計 (依篩選)</span>
                             </h3>
-                            <span className="text-xs font-semibold text-slate-400">
-                              {statsDateFilter === 'all' ? '所有天數累計' : JULY_DATES.find(d => d.dateStr === statsDateFilter)?.display}
-                            </span>
+                            
+                            {/* 獨立導出按鈕 */}
+                            <button
+                              onClick={handleExportItemStatistics}
+                              className="flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-orange-100 text-slate-700 hover:text-orange-800 font-bold text-xs rounded-lg transition-colors border border-slate-200"
+                              title="導出此工作表"
+                            >
+                              <DownloadIcon className="h-3.5 w-3.5" />
+                              <span>匯出 Excel</span>
+                            </button>
                           </div>
 
                           {itemStatistics.length === 0 ? (
@@ -1746,15 +1947,26 @@
 
                         {/* Section B: Personal Billing */}
                         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
-                          <div className="border-b border-slate-100 pb-3">
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                             <h3 className="font-bold text-slate-900 text-base flex items-center space-x-2">
                               <UsersIcon className="h-5 w-5 text-indigo-500" />
                               <span>二、個人暑期午餐帳單金額總計</span>
                             </h3>
-                            <p className="text-slate-400 text-[11px] mt-1">
-                              列出所有人的個人總金額。您可以點擊展開檢看每日詳細品項與備註。
-                            </p>
+                            
+                            {/* 獨立導出按鈕 */}
+                            <button
+                              onClick={handleExportPersonalBilling}
+                              className="flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-800 font-bold text-xs rounded-lg transition-colors border border-slate-200"
+                              title="導出個人暑期明細"
+                            >
+                              <DownloadIcon className="h-3.5 w-3.5" />
+                              <span>匯出 Excel</span>
+                            </button>
                           </div>
+                          
+                          <p className="text-slate-400 text-[11px]">
+                            列出所有人的個人總金額。您可以點擊展開檢看每日詳細品項與備註。
+                          </p>
 
                           {personalBilling.length === 0 ? (
                             <p className="text-center py-8 text-xs text-slate-400">查無相符的個人帳單紀錄</p>
@@ -1806,11 +2018,21 @@
 
                         {/* Section C: Raw Orders */}
                         <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
-                          <div className="border-b border-slate-100 pb-3">
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
                             <h3 className="font-bold text-slate-900 text-base flex items-center space-x-2">
                               <ShieldAlertIcon className="h-5 w-5 text-rose-500" />
                               <span>三、所有訂單原始數據 (維護管理)</span>
                             </h3>
+
+                            {/* 獨立導出按鈕 */}
+                            <button
+                              onClick={handleExportRawOrders}
+                              className="flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-800 font-bold text-xs rounded-lg transition-colors border border-slate-200"
+                              title="導出原始訂單明細"
+                            >
+                              <DownloadIcon className="h-3.5 w-3.5" />
+                              <span>匯出 Excel</span>
+                            </button>
                           </div>
 
                           {filteredOrders.length === 0 ? (
