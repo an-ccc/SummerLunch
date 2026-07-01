@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>暑期午餐點餐系統</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel for Browser JSX Parsing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Firebase SDKs (v9 Compat Build for CDN compatibility) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+
+  <div id="root"></div>
+
+  <!-- React code with Babel transpiler -->
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // ==========================================
+    // CUSTOM INLINE SVG ICONS
+    // ==========================================
+    const UtensilsIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+        <path d="M7 2v20" />
+        <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+      </svg>
+    );
+
+    const CalendarIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+        <line x1="16" y1="2" x2="16" y2="6" />
+        <line x1="8" y1="2" x2="8" y2="6" />
+        <line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    );
+
+    const UserIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    );
+
+    const FileSpreadsheetIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+        <polyline points="14 2 14 8 20 8" />
+        <path d="M8 13h8" />
+        <path d="M8 17h8" />
+        <path d="M10 9h2" />
+      </svg>
+    );
+
+    const SettingsIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    );
+
+    const PlusIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19" />
+        <line x1="5" y1="12" x2="19" y2="12" />
+      </svg>
+    );
+
+    const Trash2Icon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="3 6 5 6 21 6" />
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        <line x1="10" y1="11" x2="10" y2="17" />
+        <line x1="14" y1="11" x2="14" y2="17" />
+      </svg>
+    );
+
+    const CheckIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    );
+
+    const SearchIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+      </svg>
+    );
+
+    const TrendingUpIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+        <polyline points="17 6 23 6 23 12" />
+      </svg>
+    );
+
+    const UsersIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    );
+
+    const ClockIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    );
+
+    const ShieldAlertIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+    );
+
+    const ExternalLinkIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        <polyline points="15 3 21 3 21 9" />
+        <line x1="10" y1="14" x2="21" y2="3" />
+      </svg>
+    );
+
+    const ChevronRightIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="9 18 15 12 9 6" />
+      </svg>
+    );
+
+    const DollarSignIcon = ({ className }) => (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    );
+
+    // ==========================================
+    // FIREBASE INITIALIZATION & CONFIG
+    // ==========================================
+    const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'summer-lunch-ordering';
+    let db = null;
+    let auth = null;
+    let firebaseEnabled = false;
+
+    const customFirebaseConfig = null;
+    const activeConfig = customFirebaseConfig || (typeof window.__firebase_config !== 'undefined' ? JSON.parse(window.__firebase_config) : null);
+
+    if (activeConfig) {
+      try {
+        firebase.initializeApp(activeConfig);
+        auth = firebase.auth();
+        db = firebase.firestore();
+        firebaseEnabled = true;
+      } catch (e) {
+        console.error("Firebase initialization failed:", e);
+      }
+    }
+
+    // 預設日期列表 (7/1 - 7/15)
+    const JULY_DATES = [
+      { dateStr: '2026-07-01', display: '7/1 (三)', isWeekend: false },
+      { dateStr: '2026-07-02', display: '7/2 (四)', isWeekend: false },
+      { dateStr: '2026-07-03', display: '7/3 (五)', isWeekend: false },
+      { dateStr: '2026-07-04', display: '7/4 (六)', isWeekend: true },
+      { dateStr: '2026-07-05', display: '7/5 (日)', isWeekend: true },
+      { dateStr: '2026-07-06', display: '7/6 (一)', isWeekend: false },
+      { dateStr: '2026-07-07', display: '7/7 (二)', isWeekend: false },
+      { dateStr: '2026-07-08', display: '7/8 (三)', isWeekend: false },
+      { dateStr: '2026-07-09', display: '7/9 (四)', isWeekend: false },
+      { dateStr: '2026-07-10', display: '7/10 (五)', isWeekend: false },
+      { dateStr: '2026-07-11', display: '7/11 (六)', isWeekend: true },
+      { dateStr: '2026-07-12', display: '7/12 (日)', isWeekend: true },
+      { dateStr: '2026-07-13', display: '7/13 (一)', isWeekend: false },
+      { dateStr: '2026-07-14', display: '7/14 (二)', isWeekend: false },
+      { dateStr: '2026-07-15', display: '7/15 (三)', isWeekend: false },
+    ];
+
+    function App() {
+      const [user, setUser] = useState(null);
+      const [loading, setLoading] = useState(true);
+
+      // --- 系統設定 ---
+      const [menuLink, setMenuLink] = useState('https://docs.google.com/spreadsheets/d/your-spreadsheet-id/edit');
+      const [quickItems, setQuickItems] = useState([
+        { id: 'q1', name: '排骨飯', price: 95 },
+        { id: 'q2', name: '雞腿飯', price: 110 },
+        { id: 'q3', name: '招牌便當', price: 85 },
+        { id: 'q4', name: '紅燒肉飯', price: 90 },
+        { id: 'q5', name: '紅茶', price: 25 },
+        { id: 'q6', name: '綠茶', price: 25 }
+      ]);
+      const [dailyMenus, setDailyMenus] = useState({}); // { [dateStr]: [items...] } 新增：每日專屬菜單物件
+      const [adminPassword, setAdminPassword] = useState('admin123');
+
+      // --- 點餐狀態 ---
+      const [orders, setOrders] = useState([]);
+      const [currentName, setCurrentName] = useState('');
+      const [selectedDate, setSelectedDate] = useState('2026-07-01');
+      const [orderItems, setOrderItems] = useState([]); 
+      const [remarks, setRemarks] = useState('');
+      const [customItemName, setCustomItemName] = useState('');
+      const [customItemPrice, setCustomItemPrice] = useState('');
+
+      // --- UI 控制 ---
+      const [activeTab, setActiveTab] = useState('order'); 
+      const [adminUnlocked, setAdminUnlocked] = useState(false);
+      const [enteredPassword, setEnteredPassword] = useState('');
+      const [toastMessage, setToastMessage] = useState(null);
+      const [toastType, setToastType] = useState('success'); 
+      const [existingOrderFound, setExistingOrderFound] = useState(false);
+      const [isSyncingSheet, setIsSyncingSheet] = useState(false);
+      const [deleteModalOrder, setDeleteModalOrder] = useState(null); 
+      const [selectedAdminMenuDate, setSelectedAdminMenuDate] = useState('global'); // 新增：後台目前正在設定的目標日期 ('global' 或 '2026-07-xx')
+
+      // --- 後台統計篩選 ---
+      const [statsDateFilter, setStatsDateFilter] = useState('all'); 
+      const [searchUserQuery, setSearchUserQuery] = useState('');
+
+      const showToast = (message, type = 'success') => {
+        setToastMessage(message);
+        setToastType(type);
+        setTimeout(() => {
+          setToastMessage(null);
+        }, 5000);
+      };
+
+      // ==========================================
+      // FIREBASE EFFECTS
+      // ==========================================
+      useEffect(() => {
+        if (!firebaseEnabled) {
+          const mockOrders = [
+            { id: '張小明_2026-07-01', name: '張小明', date: '2026-07-01', items: [{ name: '招牌乾麵', price: 75, qty: 1 }, { name: '鮮肉水餃', price: 7, qty: 10 }], remarks: '麵大辣', updatedAt: new Date() },
+            { id: '李小美_2026-07-01', name: '李小美', date: '2026-07-01', items: [{ name: '招牌乾麵', price: 75, qty: 1 }], remarks: '不要蔥', updatedAt: new Date() },
+            { id: '張小明_2026-07-02', name: '張小明', date: '2026-07-02', items: [{ name: '排骨飯', price: 95, qty: 1 }], remarks: '', updatedAt: new Date() },
+            { id: '王大同_2026-07-03', name: '王大同', date: '2026-07-03', items: [{ name: '招牌便當', price: 85, qty: 2 }], remarks: '一盒飯少一點', updatedAt: new Date() }
+          ];
+          setOrders(mockOrders);
+          setLoading(false);
+          return;
+        }
+
+        const initAuth = async () => {
+          try {
+            if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+              await auth.signInWithCustomToken(window.__initial_auth_token);
+            } else {
+              await auth.signInAnonymously();
+            }
+          } catch (e) {
+            console.error("Auth failed:", e);
+            showToast("登入授權失敗，系統將在離線模式下運作", "error");
+          }
+        };
+        initAuth();
+
+        const unsubscribe = auth.onAuthStateChanged((usr) => {
+          setUser(usr);
+        });
+
+        return () => unsubscribe();
+      }, []);
+
+      useEffect(() => {
+        if (!firebaseEnabled || !user) return;
+
+        setLoading(true);
+
+        const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+        const unsubConfig = configDocRef.onSnapshot((docSnap) => {
+          if (docSnap.exists) {
+            const data = docSnap.data();
+            if (data.menuLink) setMenuLink(data.menuLink);
+            if (data.quickItems) setQuickItems(data.quickItems);
+            if (data.dailyMenus) setDailyMenus(data.dailyMenus); // 讀取每日專屬菜單
+            if (data.adminPassword) setAdminPassword(data.adminPassword);
+          } else {
+            configDocRef.set({
+              menuLink,
+              quickItems,
+              dailyMenus: {},
+              adminPassword
+            }).catch(e => console.error("Initialize config error:", e));
+          }
+        }, (err) => {
+          console.error("Firestore config subscription error:", err);
+        });
+
+        const ordersColRef = db.collection(`artifacts/${appId}/public/data/orders`);
+        const unsubOrders = ordersColRef.onSnapshot((querySnap) => {
+          const ordersList = [];
+          querySnap.forEach((doc) => {
+            ordersList.push({ id: doc.id, ...doc.data() });
+          });
+          setOrders(ordersList);
+          setLoading(false);
+        }, (err) => {
+          console.error("Firestore orders subscription error:", err);
+          setLoading(false);
+        });
+
+        return () => {
+          unsubConfig();
+          unsubOrders();
+        };
+      }, [user]);
+
+      // ==========================================
+      // BUSINESS LOGIC
+      // ==========================================
+      
+      // 智慧餐點列表路由：若當天有專屬菜單就顯示專屬菜單，若無則降級顯示全域預設菜單
+      const currentActiveMenu = useMemo(() => {
+        if (dailyMenus && dailyMenus[selectedDate] && dailyMenus[selectedDate].length > 0) {
+          return { items: dailyMenus[selectedDate], type: 'daily' };
+        }
+        return { items: quickItems, type: 'global' };
+      }, [selectedDate, quickItems, dailyMenus]);
+
+      useEffect(() => {
+        if (!currentName || !selectedDate) {
+          setExistingOrderFound(false);
+          return;
+        }
+        const cleanName = currentName.trim();
+        const existing = orders.find(o => o.name === cleanName && o.date === selectedDate);
+        if (existing) {
+          setExistingOrderFound(true);
+          setOrderItems(existing.items || []);
+          setRemarks(existing.remarks || '');
+        } else {
+          setExistingOrderFound(false);
+          setOrderItems([]);
+          setRemarks('');
+        }
+      }, [currentName, selectedDate, orders]);
+
+      const handleQuickItemQtyChange = (item, change) => {
+        setOrderItems(prev => {
+          const existing = prev.find(i => i.name === item.name);
+          if (existing) {
+            const newQty = existing.qty + change;
+            if (newQty <= 0) {
+              return prev.filter(i => i.name !== item.name);
+            }
+            return prev.map(i => i.name === item.name ? { ...i, qty: newQty } : i);
+          } else if (change > 0) {
+            return [...prev, { name: item.name, price: item.price, qty: change }];
+          }
+          return prev;
+        });
+      };
+
+      const getQuickItemQty = (itemName) => {
+        const item = orderItems.find(i => i.name === itemName);
+        return item ? item.qty : 0;
+      };
+
+      const handleAddCustomItem = () => {
+        if (!customItemName.trim()) {
+          showToast("請輸入自訂品項名稱", "error");
+          return;
+        }
+        const price = parseFloat(customItemPrice) || 0;
+        
+        setOrderItems(prev => {
+          const existing = prev.find(i => i.name === customItemName.trim());
+          if (existing) {
+            return prev.map(i => i.name === customItemName.trim() ? { ...i, qty: i.qty + 1 } : i);
+          }
+          return [...prev, { name: customItemName.trim(), price, qty: 1 }];
+        });
+
+        setCustomItemName('');
+        setCustomItemPrice('');
+        showToast(`已新增自訂品項: ${customItemName}`, 'success');
+      };
+
+      const handleRemoveOrderItem = (itemName) => {
+        setOrderItems(prev => prev.filter(i => i.name !== itemName));
+      };
+
+      const handleSubmitOrder = async (e) => {
+        e.preventDefault();
+        const cleanName = currentName.trim();
+        if (!cleanName) {
+          showToast("請填寫您的姓名！", "error");
+          return;
+        }
+        if (!selectedDate) {
+          showToast("請選擇點餐日期！", "error");
+          return;
+        }
+        if (orderItems.length === 0) {
+          showToast("您的購物車是空的，請至少點選一項品項！", "error");
+          return;
+        }
+
+        const orderData = {
+          name: cleanName,
+          date: selectedDate,
+          items: orderItems,
+          remarks: remarks.trim(),
+          updatedAt: firebaseEnabled ? firebase.firestore.FieldValue.serverTimestamp() : new Date()
+        };
+
+        const docId = `${cleanName}_${selectedDate}`;
+
+        if (firebaseEnabled) {
+          try {
+            const orderDocRef = db.doc(`artifacts/${appId}/public/data/orders/${docId}`);
+            await orderDocRef.set(orderData);
+            showToast(existingOrderFound ? "已成功更新您的訂單！(舊訂單已被自動覆蓋)" : "訂餐成功！", "success");
+          } catch (err) {
+            console.error("Save order error:", err);
+            showToast("送出訂單失敗，請稍後再試", "error");
+          }
+        } else {
+          setOrders(prev => {
+            const filtered = prev.filter(o => o.id !== docId);
+            return [...filtered, { id: docId, ...orderData }];
+          });
+          showToast(existingOrderFound ? "已成功更新您的訂單！(離線模擬)" : "訂餐成功！(離線模擬)", "success");
+        }
+
+        setOrderItems([]);
+        setRemarks('');
+      };
+
+      const uniqueNames = useMemo(() => {
+        const names = orders.map(o => o.name);
+        return Array.from(new Set(names)).sort();
+      }, [orders]);
+
+      const handleUnlockAdmin = (e) => {
+        e.preventDefault();
+        if (enteredPassword === adminPassword) {
+          setAdminUnlocked(true);
+          showToast("成功解鎖後台管理系統", "success");
+        } else {
+          showToast("密碼錯誤！請重試", "error");
+        }
+      };
+
+      const handleSaveAdminPassword = async (newPass) => {
+        if (!newPass.trim()) return;
+        if (firebaseEnabled) {
+          try {
+            const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+            await configDocRef.set({ adminPassword: newPass.trim() }, { merge: true });
+            showToast("後台密碼已更新", "success");
+          } catch (err) {
+            showToast("密碼更新失敗", "error");
+          }
+        } else {
+          setAdminPassword(newPass.trim());
+          showToast("後台密碼已更新 (模擬)", "success");
+        }
+      };
+
+      const handleSaveMenuLink = async (newUrl) => {
+        if (firebaseEnabled) {
+          try {
+            const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+            await configDocRef.set({ menuLink: newUrl.trim() }, { merge: true });
+            showToast("菜單雲端連結已更新", "success");
+          } catch (err) {
+            showToast("更新失敗", "error");
+          }
+        } else {
+          setMenuLink(newUrl.trim());
+          showToast("菜單雲端連結已更新 (模擬)", "success");
+        }
+      };
+
+      // ==========================================
+      // GOOGLE SHEETS 智慧雙重解析網址轉換器 (智慧支援常規與發佈連結)
+      // ==========================================
+      const convertToCsvUrl = (url) => {
+        url = url.trim();
+        if (!url) return null;
+
+        if (url.includes('output=csv') || url.includes('format=csv')) {
+          return url;
+        }
+
+        if (url.includes('/d/e/')) {
+          let csvUrl = url;
+          if (csvUrl.includes('/pubhtml')) {
+            csvUrl = csvUrl.replace('/pubhtml', '/pub');
+          }
+          if (!csvUrl.includes('output=csv')) {
+            csvUrl += csvUrl.includes('?') ? '&output=csv' : '?output=csv';
+          }
+          return csvUrl;
+        }
+
+        if (url.includes('/docs.google.com/spreadsheets/d/')) {
+          const idMatches = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+          if (!idMatches) return null;
+          const sheetId = idMatches[1];
+
+          let gid = '';
+          const gidMatches = url.match(/[?&#]gid=([0-9]+)/);
+          if (gidMatches) {
+            gid = gidMatches[1];
+          }
+
+          let csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+          if (gid) {
+            csvUrl += `&gid=${gid}`;
+          }
+          return csvUrl;
+        }
+
+        return url;
+      };
+
+      // 匯入與同步菜單邏輯（強化支援單日專屬菜單匯入與覆蓋）
+      const handleSyncItemsFromSheet = async (targetUrl = menuLink) => {
+        targetUrl = targetUrl.trim();
+        if (!targetUrl) {
+          showToast("請輸入有效的試算表網址", "error");
+          return;
+        }
+
+        setIsSyncingSheet(true);
+        const destinationText = selectedAdminMenuDate === 'global' 
+          ? '全域預設菜單' 
+          : `${JULY_DATES.find(d => d.dateStr === selectedAdminMenuDate)?.display || selectedAdminMenuDate} 專屬菜單`;
+        showToast(`正在嘗試將試算表同步至：${destinationText}...`, "info");
+
+        // 智慧通道 A：免代理的 JSONP NATIVE API 技術
+        const isRegularSheet = targetUrl.includes('/docs.google.com/spreadsheets/d/') && !targetUrl.includes('/d/e/');
+
+        if (isRegularSheet) {
+          try {
+            const sheetIdMatch = targetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (!sheetIdMatch) throw new Error("無法解析試算表 ID");
+            const sheetId = sheetIdMatch[1];
+            
+            let gid = "0";
+            const gidMatch = targetUrl.match(/[?&#]gid=([0-9]+)/);
+            if (gidMatch) {
+              gid = gidMatch[1];
+            }
+
+            const callbackName = `gvizjsonp_${Date.now()}`;
+            
+            const jsonpPromise = new Promise((resolve, reject) => {
+              const timeout = setTimeout(() => {
+                cleanup();
+                reject(new Error("連線逾時！請確認該試算表已開啟共用權限為「知道連結的任何人均可檢視」！"));
+              }, 12000);
+
+              const cleanup = () => {
+                clearTimeout(timeout);
+                delete window[callbackName];
+                const el = document.getElementById(scriptId);
+                if (el) el.remove();
+              };
+
+              window[callbackName] = (data) => {
+                cleanup();
+                resolve(data);
+              };
+
+              const scriptId = `gviz_script_${Date.now()}`;
+              const script = document.createElement('script');
+              script.id = scriptId;
+              script.src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?gid=${gid}&tqx=responseHandler:${callbackName}`;
+              script.onerror = (err) => {
+                cleanup();
+                reject(new Error("載入失敗！請確認該試算表共用設定已設定為「知道連結的任何人均可檢視」！"));
+              };
+              document.body.appendChild(script);
+            });
+
+            const data = await jsonpPromise;
+            
+            if (data.status === "error") {
+              throw new Error(data.errors?.[0]?.detailed_message || "Google Sheets API 回傳錯誤");
+            }
+
+            const rows = data.table?.rows || [];
+            const newItems = rows.map((row, idx) => {
+              const name = row.c[0]?.v ? String(row.c[0].v).trim() : '';
+              const priceVal = row.c[1]?.v;
+              const price = typeof priceVal === 'number' 
+                ? priceVal 
+                : (parseFloat(String(priceVal || '').replace(/[^0-9.]/g, '')) || 0);
+              
+              return {
+                id: `sheet-${idx}-${Date.now()}`,
+                name,
+                price
+              };
+            }).filter(item => {
+              if (!item.name) return false;
+              const nameLower = item.name.toLowerCase();
+              return !(
+                nameLower.includes('品名') || 
+                nameLower.includes('品項') || 
+                nameLower.includes('名稱') || 
+                nameLower.includes('價格') || 
+                nameLower.includes('單價') || 
+                nameLower.includes('name') || 
+                nameLower.includes('price')
+              );
+            });
+
+            if (newItems.length === 0) {
+              throw new Error("工作表內容為空或欄位不符（A欄品名、B欄單價）。");
+            }
+
+            // 儲存至對應目的地
+            if (firebaseEnabled) {
+              const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+              if (selectedAdminMenuDate === 'global') {
+                await configDocRef.set({ quickItems: newItems }, { merge: true });
+              } else {
+                const updatedDailyMenus = { ...dailyMenus, [selectedAdminMenuDate]: newItems };
+                await configDocRef.set({ dailyMenus: updatedDailyMenus }, { merge: true });
+              }
+            } else {
+              if (selectedAdminMenuDate === 'global') {
+                setQuickItems(newItems);
+              } else {
+                setDailyMenus(prev => ({ ...prev, [selectedAdminMenuDate]: newItems }));
+              }
+            }
+
+            showToast(`🎉 智慧同步成功！已為您匯入「${destinationText}」共 ${newItems.length} 個品項！`, "success");
+          } catch (error) {
+            console.error("JSONP Sync Error:", error);
+            showToast(`同步失敗：${error.message}`, "error");
+          } finally {
+            setIsSyncingSheet(false);
+          }
+          return;
+        }
+
+        // 智慧通道 B：CSV 連結防CORS備援鏈
+        const csvUrl = convertToCsvUrl(targetUrl);
+        if (!csvUrl) {
+          showToast("網址格式不正確", "error");
+          setIsSyncingSheet(false);
+          return;
+        }
+
+        let csvText = "";
+        let fetchedSuccess = false;
+        let errorDetails = "";
+
+        try {
+          const response = await fetch(csvUrl);
+          if (response.ok) {
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.includes("text/html")) {
+              csvText = await response.text();
+              fetchedSuccess = true;
+            } else {
+              errorDetails = "Google 重新導向至登入頁";
+            }
+          } else {
+            errorDetails = `HTTP 錯誤代碼 ${response.status}`;
+          }
+        } catch (e) {
+          errorDetails = e.message || "直連跨來源(CORS)限制";
+        }
+
+        if (!fetchedSuccess) {
+          try {
+            console.log("直連失敗，啟用備用 AllOrigins 代理獲取...");
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`;
+            const response = await fetch(proxyUrl);
+            if (response.ok) {
+              const text = await response.text();
+              if (text && !text.includes("<!DOCTYPE html>") && !text.includes("<html")) {
+                csvText = text;
+                fetchedSuccess = true;
+              } else {
+                errorDetails = "資料為 HTML 網頁而非 CSV 格式";
+              }
+            } else {
+              errorDetails = `AllOrigins 錯誤碼 ${response.status}`;
+            }
+          } catch (e) {
+            errorDetails = `AllOrigins 失敗: ${e.message}`;
+          }
+        }
+
+        if (!fetchedSuccess) {
+          try {
+            console.log("AllOrigins 失敗，啟用備援 CORSProxy.io 通道...");
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(csvUrl)}`;
+            const response = await fetch(proxyUrl);
+            if (response.ok) {
+              const text = await response.text();
+              if (text && !text.includes("<!DOCTYPE html>") && !text.includes("<html")) {
+                csvText = text;
+                fetchedSuccess = true;
+              } else {
+                errorDetails = "資料為 HTML 網頁";
+              }
+            } else {
+              errorDetails = `CORSProxy.io 錯誤碼 ${response.status}`;
+            }
+          } catch (e) {
+            errorDetails = `CORSProxy.io 失敗: ${e.message}`;
+          }
+        }
+
+        if (!fetchedSuccess) {
+          setIsSyncingSheet(false);
+          showToast(`同步失敗！原因：${errorDetails}`, "error");
+          return;
+        }
+
+        try {
+          const lines = csvText.split('\n');
+          const newItems = [];
+          let startIdx = 0;
+          
+          if (lines.length > 0) {
+            const firstLineStr = lines[0].toLowerCase();
+            if (
+              firstLineStr.includes('品名') || 
+              firstLineStr.includes('品項') || 
+              firstLineStr.includes('名稱') || 
+              firstLineStr.includes('價格') || 
+              firstLineStr.includes('單價') || 
+              firstLineStr.includes('name') || 
+              firstLineStr.includes('price') ||
+              firstLineStr.includes('item')
+            ) {
+              startIdx = 1;
+            }
+          }
+
+          for (let i = startIdx; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const columns = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            
+            if (columns.length >= 2) {
+              const name = columns[0].replace(/^"|"$/g, '').trim();
+              const priceStr = columns[1].replace(/^"|"$/g, '').trim();
+              const price = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0; 
+              
+              if (name && !isNaN(price)) {
+                newItems.push({
+                  id: `sheet-${i}-${Date.now()}`,
+                  name,
+                  price
+                });
+              }
+            }
+          }
+
+          if (newItems.length === 0) {
+            throw new Error("FORMAT_ERROR");
+          }
+
+          // 儲存至對應目的地
+          if (firebaseEnabled) {
+            const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+            if (selectedAdminMenuDate === 'global') {
+              await configDocRef.set({ quickItems: newItems }, { merge: true });
+            } else {
+              const updatedDailyMenus = { ...dailyMenus, [selectedAdminMenuDate]: newItems };
+              await configDocRef.set({ dailyMenus: updatedDailyMenus }, { merge: true });
+            }
+          } else {
+            if (selectedAdminMenuDate === 'global') {
+              setQuickItems(newItems);
+            } else {
+              setDailyMenus(prev => ({ ...prev, [selectedAdminMenuDate]: newItems }));
+            }
+          }
+
+          showToast(`🎉 成功同步！已為您從發佈工作表匯入 ${newItems.length} 個品項！`, "success");
+        } catch (error) {
+          showToast("解析失敗，請確認 A 欄為品名，B 欄為單價！", "error");
+        } finally {
+          setIsSyncingSheet(false);
+        }
+      };
+
+      // 新增菜單項目（相容全域與單日專屬）
+      const handleAddQuickItem = async (name, price) => {
+        if (!name.trim()) return;
+        const numPrice = parseFloat(price) || 0;
+        const newItem = { id: Date.now().toString(), name: name.trim(), price: numPrice };
+
+        if (selectedAdminMenuDate === 'global') {
+          const updated = [...quickItems, newItem];
+          if (firebaseEnabled) {
+            try {
+              const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+              await configDocRef.set({ quickItems: updated }, { merge: true });
+              showToast("已成功手動加入全域推薦品項", "success");
+            } catch (err) {
+              showToast("加入失敗", "error");
+            }
+          } else {
+            setQuickItems(updated);
+            showToast("已成功手動加入全域推薦品項 (模擬)", "success");
+          }
+        } else {
+          const currentDaily = dailyMenus[selectedAdminMenuDate] || [];
+          const updated = [...currentDaily, newItem];
+          const updatedDailyMenus = { ...dailyMenus, [selectedAdminMenuDate]: updated };
+          if (firebaseEnabled) {
+            try {
+              const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+              await configDocRef.set({ dailyMenus: updatedDailyMenus }, { merge: true });
+              showToast(`已成功手動加入當日專屬推薦品項`, "success");
+            } catch (err) {
+              showToast("加入失敗", "error");
+            }
+          } else {
+            setDailyMenus(updatedDailyMenus);
+            showToast(`已成功手動加入當日專屬推薦品項 (模擬)`, "success");
+          }
+        }
+      };
+
+      // 刪除菜單項目（相容全域與單日專屬）
+      const handleDeleteQuickItem = async (itemId) => {
+        if (selectedAdminMenuDate === 'global') {
+          const updated = quickItems.filter(i => i.id !== itemId);
+          if (firebaseEnabled) {
+            try {
+              const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+              await configDocRef.set({ quickItems: updated }, { merge: true });
+              showToast("全域品項已刪除", "success");
+            } catch (err) {
+              showToast("刪除失敗", "error");
+            }
+          } else {
+            setQuickItems(updated);
+            showToast("全域品項已刪除 (模擬)", "success");
+          }
+        } else {
+          const currentDaily = dailyMenus[selectedAdminMenuDate] || [];
+          const updated = currentDaily.filter(i => i.id !== itemId);
+          const updatedDailyMenus = { ...dailyMenus, [selectedAdminMenuDate]: updated };
+          if (firebaseEnabled) {
+            try {
+              const configDocRef = db.doc(`artifacts/${appId}/public/data/global_settings/config`);
+              await configDocRef.set({ dailyMenus: updatedDailyMenus }, { merge: true });
+              showToast("當日專屬品項已刪除", "success");
+            } catch (err) {
+              showToast("刪除失敗", "error");
+            }
+          } else {
+            setDailyMenus(updatedDailyMenus);
+            showToast("當日專屬品項已刪除 (模擬)", "success");
+          }
+        }
+      };
+
+      const handleConfirmDeleteOrder = async () => {
+        if (!deleteModalOrder) return;
+        const orderId = deleteModalOrder.id;
+
+        if (firebaseEnabled) {
+          try {
+            const orderDocRef = db.doc(`artifacts/${appId}/public/data/orders/${orderId}`);
+            await orderDocRef.delete();
+            showToast("訂單已刪除", "success");
+          } catch (err) {
+            showToast("刪除訂單失敗", "error");
+          }
+        } else {
+          setOrders(prev => prev.filter(o => o.id !== orderId));
+          showToast("訂單已刪除 (模擬)", "success");
+        }
+        setDeleteModalOrder(null);
+      };
+
+      // 目前後台管理頁面顯示的品項清單
+      const adminDisplayItems = useMemo(() => {
+        if (selectedAdminMenuDate === 'global') {
+          return quickItems;
+        }
+        return dailyMenus[selectedAdminMenuDate] || [];
+      }, [selectedAdminMenuDate, quickItems, dailyMenus]);
+
+      // ==========================================
+      // MEMOIZED STATS
+      // ==========================================
+      const filteredOrders = useMemo(() => {
+        return orders.filter(o => {
+          const matchDate = statsDateFilter === 'all' || o.date === statsDateFilter;
+          const matchUser = !searchUserQuery.trim() || o.name.toLowerCase().includes(searchUserQuery.toLowerCase().trim());
+          return matchDate && matchUser;
+        });
+      }, [orders, statsDateFilter, searchUserQuery]);
+
+      const itemStatistics = useMemo(() => {
+        const stats = {};
+        filteredOrders.forEach(order => {
+          if (order.items && Array.isArray(order.items)) {
+            order.items.forEach(item => {
+              if (!stats[item.name]) {
+                stats[item.name] = { totalQty: 0, totalPrice: 0, unitPrice: item.price };
+              }
+              stats[item.name].totalQty += item.qty;
+              stats[item.name].totalPrice += (item.qty * item.price);
+            });
+          }
+        });
+        return Object.entries(stats).map(([name, data]) => ({
+          name,
+          ...data
+        })).sort((a, b) => b.totalQty - a.totalQty);
+      }, [filteredOrders]);
+
+      const personalBilling = useMemo(() => {
+        const billing = {};
+        orders.forEach(order => {
+          const name = order.name;
+          if (!billing[name]) {
+            billing[name] = { totalSpent: 0, dates: {} };
+          }
+
+          const orderCost = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+          const itemsDescription = order.items.map(i => `${i.name}x${i.qty}`).join(', ');
+
+          billing[name].dates[order.date] = {
+            description: itemsDescription,
+            remarks: order.remarks,
+            cost: orderCost
+          };
+          
+          billing[name].totalSpent += orderCost;
+        });
+
+        return Object.entries(billing)
+          .map(([name, data]) => ({
+            name,
+            totalSpent: data.totalSpent,
+            dates: data.dates
+          }))
+          .filter(item => !searchUserQuery.trim() || item.name.toLowerCase().includes(searchUserQuery.toLowerCase().trim()))
+          .sort((a, b) => b.totalSpent - a.totalSpent);
+      }, [orders, searchUserQuery]);
+
+      const totalSystemCost = useMemo(() => {
+        return filteredOrders.reduce((total, order) => {
+          const orderCost = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+          return total + orderCost;
+        }, 0);
+      }, [filteredOrders]);
+
+      return (
+        <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
+          
+          {/* Toast Banner */}
+          {toastMessage && (
+            <div className="fixed top-5 left-1/2 transform -translate-x-1/2 z-50">
+              <div className={`px-6 py-3.5 rounded-2xl shadow-xl flex items-center space-x-2 text-white font-semibold transition-all ${
+                toastType === 'success' ? 'bg-emerald-600' : toastType === 'error' ? 'bg-rose-600' : 'bg-blue-600'
+              }`}>
+                <span>{toastMessage}</span>
+              </div>
+            </div>
+          )}
+
+          {/* 自訂刪除確認彈窗 (100% 避開 Iframe 閃退 bug) */}
+          {deleteModalOrder && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 space-y-6 animate-scaleIn">
+                <div className="text-center space-y-2">
+                  <div className="bg-rose-100 text-rose-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Trash2Icon className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">確定要刪除此筆訂單嗎？</h3>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    您即將刪除「<strong className="text-slate-800 font-bold">{deleteModalOrder.name}</strong>」在「<strong className="text-slate-800 font-bold">{JULY_DATES.find(d => d.dateStr === deleteModalOrder.date)?.display || deleteModalOrder.date}</strong>」的午餐登記紀錄。此操作將無法復原。
+                  </p>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setDeleteModalOrder(null)}
+                    className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition-colors"
+                  >
+                    取消
+                  </button>
+                  <button
+                    onClick={handleConfirmDeleteOrder}
+                    className="flex-1 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm transition-colors shadow-lg shadow-rose-600/10"
+                  >
+                    確認刪除
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Header */}
+          <header className="bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md">
+            <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="bg-white p-2.5 rounded-2xl text-orange-600 shadow-inner">
+                  <UtensilsIcon className="h-7 w-7" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">暑期午餐點餐系統</h1>
+                  <p className="text-orange-100 text-sm font-medium mt-0.5">預約期間：7/1 (三) ～ 7/15 (三)</p>
+                </div>
+              </div>
+
+              {/* Tab Selection */}
+              <div className="flex bg-orange-700/30 p-1.5 rounded-xl border border-orange-400/20 self-start md:self-auto">
+                <button
+                  onClick={() => setActiveTab('order')}
+                  className={`flex items-center space-x-2 px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
+                    activeTab === 'order' 
+                      ? 'bg-white text-orange-700 shadow-sm' 
+                      : 'text-orange-100 hover:bg-orange-600/30'
+                  }`}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  <span>我要點餐</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  className={`flex items-center space-x-2 px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm ${
+                    activeTab === 'admin' 
+                      ? 'bg-white text-orange-700 shadow-sm' 
+                      : 'text-orange-100 hover:bg-orange-600/30'
+                  }`}
+                >
+                  <SettingsIcon className="h-4 w-4" />
+                  <span>後台管理統計</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8">
+            
+            {/* 新增：只在「後台管理」頁面中顯示試算表網址橫幅，前台點餐時不顯示 */}
+            {activeTab === 'admin' && (
+              <div className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-start space-x-3.5">
+                  <div className="bg-amber-100 p-3 rounded-xl text-amber-700">
+                    <FileSpreadsheetIcon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-amber-900 font-bold text-lg">今日推薦菜單 (雲端試算表)</h3>
+                    <p className="text-amber-700 text-sm mt-0.5">
+                      您可以點擊右側按鈕打開 Google 試算表，檢查菜單格式和內容。
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={menuLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center space-x-2 px-5 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm whitespace-nowrap"
+                >
+                  <ExternalLinkIcon className="h-4 w-4" />
+                  <span>開啟雲端菜單</span>
+                </a>
+              </div>
+            )}
+
+            {/* FRONT-END TAB */}
+            {activeTab === 'order' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                {/* Left ordering form */}
+                <form onSubmit={handleSubmitOrder} className="lg:col-span-7 bg-white rounded-3xl shadow-sm border border-slate-100 p-6 md:p-8 space-y-8">
+                  <div className="border-b border-slate-100 pb-4">
+                    <h2 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
+                      <span className="w-1.5 h-6 bg-orange-500 rounded-full"></span>
+                      <span>1. 填寫基本資訊</span>
+                    </h2>
+                    <p className="text-slate-500 text-xs mt-1">同姓名與同日期的訂單送出後會自動覆蓋前一單</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-2 flex items-center space-x-1.5">
+                        <UserIcon className="h-4 w-4 text-slate-400" />
+                        <span>您的姓名 <span className="text-rose-500">*</span></span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={currentName}
+                          onChange={(e) => setCurrentName(e.target.value)}
+                          placeholder="請輸入或選擇您的名字"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all placeholder:text-slate-400"
+                          required
+                        />
+                        {uniqueNames.length > 0 && currentName && !uniqueNames.includes(currentName) && (
+                          <div className="absolute z-10 w-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-lg max-h-40 overflow-y-auto">
+                            <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 bg-slate-50">快速選擇現有名字：</div>
+                            {uniqueNames
+                              .filter(n => n.toLowerCase().includes(currentName.toLowerCase()))
+                              .map(name => (
+                                <button
+                                  key={name}
+                                  type="button"
+                                  onClick={() => setCurrentName(name)}
+                                  className="w-full text-left px-4 py-2 hover:bg-orange-50 text-slate-700 text-sm font-medium transition-colors"
+                                >
+                                  {name}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-700 font-bold mb-2 flex items-center space-x-1.5">
+                        <CalendarIcon className="h-4 w-4 text-slate-400" />
+                        <span>選取點餐日期 <span className="text-rose-500">*</span></span>
+                      </label>
+                      <div className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-semibold flex items-center justify-between">
+                        <span>{JULY_DATES.find(d => d.dateStr === selectedDate)?.display || selectedDate}</span>
+                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-medium">已選取</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Date Grid */}
+                  <div>
+                    <span className="block text-slate-500 text-xs font-semibold mb-2.5 uppercase tracking-wider">點選下方切換日期：</span>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      {JULY_DATES.map((item) => (
+                        <button
+                          key={item.dateStr}
+                          type="button"
+                          onClick={() => setSelectedDate(item.dateStr)}
+                          className={`py-3 px-2 rounded-xl border text-center transition-all duration-200 ${
+                            selectedDate === item.dateStr
+                              ? 'bg-orange-500 border-orange-500 text-white font-bold shadow-md shadow-orange-500/10 scale-[1.03]'
+                              : item.isWeekend
+                                ? 'bg-slate-100/70 border-slate-200 text-slate-400 hover:bg-slate-100'
+                                : 'bg-white border-slate-200 text-slate-700 hover:border-orange-300 hover:bg-orange-50/30'
+                          }`}
+                        >
+                          <div className="text-xs">{item.isWeekend ? '週末' : '工作日'}</div>
+                          <div className="text-sm font-bold mt-0.5">{item.display.split(' ')[0]}</div>
+                          <div className="text-[10px] opacity-80">{item.display.split(' ')[1]}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {existingOrderFound && (
+                    <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-xl flex items-start space-x-3">
+                      <ShieldAlertIcon className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-amber-900 font-bold text-sm">此日期已有您的訂餐紀錄！</h4>
+                        <p className="text-amber-700 text-xs mt-1">
+                          系統已為您自動載入「<strong>{currentName}</strong>」在 <strong>{JULY_DATES.find(d => d.dateStr === selectedDate)?.display}</strong> 的點餐紀錄。您可以在下方進行修改，再次送出後，系統會自動覆蓋為最新資料。
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Items Customization */}
+                  <div className="space-y-4">
+                    <div className="border-b border-slate-100 pb-4">
+                      <div className="flex justify-between items-center flex-wrap gap-2">
+                        <h2 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
+                          <span className="w-1.5 h-6 bg-orange-500 rounded-full"></span>
+                          <span>2. 選擇餐點品項</span>
+                        </h2>
+                        {/* 專屬或預設菜單顯示指示標章 */}
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center space-x-1 ${
+                          currentActiveMenu.type === 'daily' 
+                            ? 'bg-orange-100 text-orange-800' 
+                            : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          <span>{currentActiveMenu.type === 'daily' ? '📅 當日專屬菜單已載入' : '🌐 全域預設菜單已載入'}</span>
+                        </span>
+                      </div>
+                      <p className="text-slate-500 text-xs mt-1">點擊加減按鈕，可同時複選多個品項（例如：一份主餐＋一杯飲料）</p>
+                    </div>
+
+                    <div>
+                      <span className="block text-slate-500 text-xs font-semibold mb-3 uppercase tracking-wider">餐點品項清單：</span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {currentActiveMenu.items.map((item) => {
+                          const qty = getQuickItemQty(item.name);
+                          return (
+                            <div 
+                              key={item.id} 
+                              className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
+                                qty > 0 
+                                  ? 'border-orange-500 bg-orange-50/20 shadow-sm' 
+                                  : 'border-slate-200 bg-white hover:border-slate-300'
+                              }`}
+                            >
+                              <div>
+                                <div className="font-bold text-slate-800">{item.name}</div>
+                                <div className="text-sm font-semibold text-orange-600 mt-0.5">${item.price}</div>
+                              </div>
+                              
+                              <div className="flex items-center space-x-2.5">
+                                {qty > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleQuickItemQtyChange(item, -1)}
+                                    className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center font-bold transition-colors"
+                                  >
+                                    -
+                                  </button>
+                                )}
+                                {qty > 0 ? (
+                                  <span className="font-bold text-slate-800 text-lg w-6 text-center">{qty}</span>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickItemQtyChange(item, 1)}
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center font-bold transition-colors ${
+                                    qty > 0 
+                                      ? 'bg-orange-500 text-white hover:bg-orange-600' 
+                                      : 'bg-slate-100 text-slate-800 hover:bg-slate-200'
+                                  }`}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <span className="block text-slate-500 text-xs font-semibold mb-3 uppercase tracking-wider">若上述沒有您要的，請自訂輸入（參考雲端菜單）：</span>
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-3">
+                        <input
+                          type="text"
+                          placeholder="輸入自訂品項名稱 (如: 鱈魚便當)"
+                          value={customItemName}
+                          onChange={(e) => setCustomItemName(e.target.value)}
+                          className="flex-1 px-3 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:border-orange-500"
+                        />
+                        <div className="flex gap-2">
+                          <div className="relative flex-1 sm:w-28">
+                            <span className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-slate-400 text-sm font-semibold">$</span>
+                            <input
+                              type="number"
+                              placeholder="單價"
+                              value={customItemPrice}
+                              onChange={(e) => setCustomItemPrice(e.target.value)}
+                              className="w-full pl-6 pr-2 py-2 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:border-orange-500"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAddCustomItem}
+                            className="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold rounded-lg text-sm flex items-center space-x-1 transition-colors shrink-0"
+                          >
+                            <PlusIcon className="h-4 w-4" />
+                            <span>加入</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Remarks */}
+                  <div className="space-y-3">
+                    <div className="border-b border-slate-100 pb-4">
+                      <h2 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
+                        <span className="w-1.5 h-6 bg-orange-500 rounded-full"></span>
+                        <span>3. 客製備註</span>
+                      </h2>
+                    </div>
+                    <textarea
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                      placeholder="請輸入您的特別需求（例如：飯少、排骨不要切、飲料去冰無糖，若無請留空）"
+                      rows="2"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm placeholder:text-slate-400"
+                    ></textarea>
+                  </div>
+
+                  {/* Submit */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      className="w-full py-4 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                    >
+                      <CheckIcon className="h-5 w-5" />
+                      <span>{existingOrderFound ? '更新今日訂單 (覆蓋舊單)' : '確認送出訂單'}</span>
+                    </button>
+                  </div>
+                </form>
+
+                {/* Right preview and cart */}
+                <div className="lg:col-span-5 space-y-6">
+                  <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 space-y-6">
+                    <h3 className="text-lg font-bold text-slate-900 flex items-center justify-between">
+                      <span>本次訂購清單</span>
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
+                        {orderItems.length} 項商品
+                      </span>
+                    </h3>
+
+                    {orderItems.length === 0 ? (
+                      <div className="py-12 text-center text-slate-400 space-y-3">
+                        <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-slate-300">
+                          <UtensilsIcon className="h-8 w-8" />
+                        </div>
+                        <p className="text-sm">尚未點選任何餐點品項</p>
+                        <p className="text-xs text-slate-400">請從左側點選推薦品項或自行新增</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-100 max-h-[300px] overflow-y-auto pr-1">
+                        {orderItems.map((item, idx) => (
+                          <div key={idx} className="py-3 flex items-center justify-between group">
+                            <div>
+                              <div className="font-bold text-slate-800 text-sm">{item.name}</div>
+                              <div className="text-xs text-slate-500 mt-0.5">
+                                單價 ${item.price} × 數量 {item.qty}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-3">
+                              <span className="font-bold text-orange-600 text-sm">
+                                ${item.price * item.qty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveOrderItem(item.name)}
+                                className="text-slate-300 hover:text-rose-500 p-1 rounded transition-colors"
+                              >
+                                <Trash2Icon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {orderItems.length > 0 && (
+                      <div className="border-t border-slate-100 pt-4 space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-semibold text-slate-500">當日點餐人：</span>
+                          <span className="text-sm font-bold text-slate-800">{currentName || '(未填寫名字)'}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-semibold text-slate-500">訂購日期：</span>
+                          <span className="text-sm font-bold text-slate-800">{JULY_DATES.find(d => d.dateStr === selectedDate)?.display}</span>
+                        </div>
+                        {remarks.trim() && (
+                          <div className="text-xs bg-slate-50 p-2.5 rounded-lg text-slate-600 border border-slate-100">
+                            <strong className="text-slate-700">備註：</strong>{remarks}
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center pt-2 border-t border-dashed border-slate-200">
+                          <span className="text-base font-bold text-slate-950">單日金額總計：</span>
+                          <span className="text-2xl font-extrabold text-orange-600">
+                            ${orderItems.reduce((sum, item) => sum + (item.price * item.qty), 0)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Registered names */}
+                  <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-slate-900 text-sm">
+                        {JULY_DATES.find(d => d.dateStr === selectedDate)?.display} 已登記名單
+                      </h3>
+                      <span className="text-xs bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-bold">
+                        {orders.filter(o => o.date === selectedDate).length} 人已點
+                      </span>
+                    </div>
+
+                    {orders.filter(o => o.date === selectedDate).length === 0 ? (
+                      <p className="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-100">
+                        此日期目前尚無人登記，快來當第一個點餐者吧！
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {orders
+                          .filter(o => o.date === selectedDate)
+                          .map((o, idx) => (
+                            <div 
+                              key={idx} 
+                              onClick={() => {
+                                setCurrentName(o.name);
+                                setSelectedDate(o.date);
+                              }}
+                              className="px-3 py-2 bg-slate-50 hover:bg-orange-50 border border-slate-100 hover:border-orange-200 rounded-xl text-left cursor-pointer transition-all"
+                            >
+                              <div className="font-semibold text-slate-800 text-xs truncate">{o.name}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5 truncate">
+                                {o.items.map(i => i.name).join(', ')}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ADMIN TAB */}
+            {activeTab === 'admin' && (
+              <div className="space-y-8">
+                {!adminUnlocked ? (
+                  <div className="max-w-md mx-auto bg-white rounded-3xl shadow-sm border border-slate-100 p-8 text-center space-y-6 my-12">
+                    <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto text-orange-600">
+                      <SettingsIcon className="h-8 w-8" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">後台管理安全鎖</h2>
+                      <p className="text-slate-500 text-xs mt-1">請輸入後台存取密碼以查看統計與系統設定</p>
+                    </div>
+                    <form onSubmit={handleUnlockAdmin} className="space-y-4">
+                      <input
+                        type="password"
+                        placeholder="請輸入密碼 (預設為 admin123)"
+                        value={enteredPassword}
+                        onChange={(e) => setEnteredPassword(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-center focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        required
+                      />
+                      <button type="submit" className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all">
+                        解鎖後台
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div className="space-y-8 animate-fadeIn">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 pb-6">
+                      <div>
+                        <h2 className="text-2xl font-black text-slate-900 flex items-center space-x-2">
+                          <span>後台管理與餐點統計</span>
+                          <span className="text-xs bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold">已解鎖</span>
+                        </h2>
+                        <p className="text-slate-500 text-xs mt-1">在此管理雲端菜單、預設快速品項，並查看所有人跨日期訂購金額總計。</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setAdminUnlocked(false);
+                          setEnteredPassword('');
+                        }}
+                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-colors"
+                      >
+                        重新上鎖
+                      </button>
+                    </div>
+
+                    {/* Overviews */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                        <div className="bg-orange-100 p-3.5 rounded-xl text-orange-600">
+                          <ClockIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-slate-400">總訂購筆數</div>
+                          <div className="text-2xl font-bold text-slate-900 mt-1">{orders.length} 筆紀錄</div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                        <div className="bg-amber-100 p-3.5 rounded-xl text-amber-600">
+                          <UsersIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-slate-400">點餐不重複人數</div>
+                          <div className="text-2xl font-bold text-slate-900 mt-1">{uniqueNames.length} 人已參與</div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4">
+                        <div className="bg-emerald-100 p-3.5 rounded-xl text-emerald-600">
+                          <DollarSignIcon className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-slate-400">當前統計篩選總金額</div>
+                          <div className="text-2xl font-bold text-emerald-600 mt-1">${totalSystemCost}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                      {/* Left: Configurations */}
+                      <div className="lg:col-span-5 space-y-6">
+                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-5">
+                          <h3 className="font-bold text-slate-900 text-base flex items-center space-x-2">
+                            <SettingsIcon className="h-5 w-5 text-slate-500" />
+                            <span>系統基本設定</span>
+                          </h3>
+
+                          {/* 新增：選取要匯入/設定的菜單目標 */}
+                          <div className="space-y-2 bg-orange-50/50 p-4 rounded-xl border border-orange-100">
+                            <label className="block text-xs font-extrabold text-orange-800">📂 選擇要設定的菜單對象：</label>
+                            <select
+                              value={selectedAdminMenuDate}
+                              onChange={(e) => setSelectedAdminMenuDate(e.target.value)}
+                              className="w-full bg-white border border-orange-200 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-orange-500"
+                            >
+                              <option value="global">🌐 全域預設菜單 (無專屬菜單時使用)</option>
+                              {JULY_DATES.map(d => (
+                                <option key={d.dateStr} value={d.dateStr}>📅 {d.display} 專屬菜單</option>
+                              ))}
+                            </select>
+                            <p className="text-[10px] text-orange-600/80 mt-1.5 font-medium">
+                              提示：選擇上方日期後，您在下方所「智慧同步」或「手動追加」的品項，都將直接儲存為該日期的專屬菜單！
+                            </p>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-500">雲端試算表菜單網址：</label>
+                            <div className="flex flex-col gap-2">
+                              <input
+                                type="text"
+                                value={menuLink}
+                                onChange={(e) => {
+                                  setMenuLink(e.target.value);
+                                  handleSaveMenuLink(e.target.value);
+                                }}
+                                placeholder="貼上 Google Sheets 編輯網址或發佈網址..."
+                                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-orange-500 font-mono"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSyncItemsFromSheet(menuLink)}
+                                disabled={isSyncingSheet}
+                                className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 border transition-all ${
+                                  isSyncingSheet
+                                    ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                    : 'bg-orange-50 hover:bg-orange-100 border-orange-200 text-orange-700 shadow-sm'
+                                }`}
+                              >
+                                <span>{isSyncingSheet ? '⏳ 正在讀取 Google 雲端...' : '🔄 智慧同步至所選對象'}</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Troubleshooting instruction panel */}
+                          <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl space-y-2.5 text-xs text-amber-900 shadow-inner leading-relaxed">
+                            <span className="font-extrabold flex items-center space-x-1">
+                              <ShieldAlertIcon className="h-4 w-4 text-amber-600" />
+                              <span>📢 試算表同步超強攻略（任選一種）：</span>
+                            </span>
+                            <div className="space-y-1.5 pl-1 text-[11px] text-amber-800">
+                              <p className="font-bold text-amber-900">💡 方案 A：一般編輯網址（推薦！100% 免代理伺服器阻擋）</p>
+                              <ol className="list-decimal pl-4 space-y-0.5">
+                                <li>直接複製瀏覽器頂部的網址（如：`https://docs.google.com/spreadsheets/d/.../edit#gid=1616942760`）。</li>
+                                <li>點擊試算表右上角「<strong className="text-amber-950">共用</strong>」，將一般存取權設為<strong>「知道連結的任何人均可檢視」</strong>。</li>
+                                <li>直接貼上並點擊智慧同步按鈕，大功告成！</li>
+                              </ol>
+                              <p className="font-bold text-amber-900 mt-2">💡 方案 B：發佈到網路的 CSV 網址（含自動備援代理）</p>
+                              <ol className="list-decimal pl-4 space-y-0.5">
+                                <li>點擊 <strong className="text-amber-950">檔案</strong> $\rightarrow$ <strong className="text-amber-950">共用</strong> $\rightarrow$ <strong className="text-amber-950">發佈到網路</strong>。</li>
+                                <li>選擇要發佈的工作表（如：八方雲集...），格式選擇「<strong className="text-amber-950">逗號分隔值(.csv)</strong>」。</li>
+                                <li>點擊 <strong className="text-amber-950">發佈</strong> 並複製該網址，貼上本系統並點擊智慧同步。</li>
+                              </ol>
+                              <div className="border-t border-amber-200/60 pt-1.5 mt-1.5">
+                                <p className="font-semibold"><strong className="text-amber-900">📊 試算表內文格式：</strong></p>
+                                <p>A 欄填寫 <strong className="text-amber-950">品名</strong>（例：招牌水餃），B 欄填寫 <strong className="text-amber-950">價格數字</strong>（例：7）。系統會自動排除「品名/單價」首列標題！</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="block text-xs font-bold text-slate-500">修改後台安全密碼：</label>
+                            <input
+                              type="text"
+                              value={adminPassword}
+                              onChange={(e) => handleSaveAdminPassword(e.target.value)}
+                              placeholder="請設定新密碼"
+                              className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-orange-500 font-mono"
+                            />
+                          </div>
+                        </div>
+
+                        {/* 品項管理（全域或單日推薦） */}
+                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                          <h3 className="font-bold text-slate-900 text-base flex items-center space-x-2">
+                            <PlusIcon className="h-5 w-5 text-slate-500" />
+                            <span>
+                              {selectedAdminMenuDate === 'global' ? '🌐 全域預設菜單管理' : `📅 ${JULY_DATES.find(d => d.dateStr === selectedAdminMenuDate)?.display} 專屬菜單管理`} 
+                              ({adminDisplayItems.length} 項)
+                            </span>
+                          </h3>
+                          <p className="text-xs text-slate-500">
+                            您正處於【{selectedAdminMenuDate === 'global' ? '全域預設' : JULY_DATES.find(d => d.dateStr === selectedAdminMenuDate)?.display + ' 專屬'}】菜單狀態。您可以使用下方表單手動追加品項。
+                          </p>
+
+                          <form 
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const form = e.target;
+                              const name = form.itemName.value;
+                              const price = form.itemPrice.value;
+                              handleAddQuickItem(name, price);
+                              form.reset();
+                            }}
+                            className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 flex flex-col gap-2"
+                          >
+                            <div className="grid grid-cols-2 gap-2">
+                              <input
+                                type="text"
+                                name="itemName"
+                                placeholder="品項名稱 (如: 雞排飯)"
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs"
+                                required
+                              />
+                              <input
+                                type="number"
+                                name="itemPrice"
+                                placeholder="價格 (如: 100)"
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs"
+                                required
+                              />
+                            </div>
+                            <button type="submit" className="py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg transition-colors">
+                              + 手動臨時追加品項
+                            </button>
+                          </form>
+
+                          {/* 顯示目前選定菜單的餐點 */}
+                          {adminDisplayItems.length === 0 ? (
+                            <p className="text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-100">
+                              目前此菜單是空的。請在上方「智慧同步」或在下方手動追加！
+                            </p>
+                          ) : (
+                            <div className="divide-y divide-slate-100 max-h-56 overflow-y-auto pr-1">
+                              {adminDisplayItems.map((item) => (
+                                <div key={item.id} className="py-2.5 flex items-center justify-between text-xs">
+                                  <div>
+                                    <span className="font-bold text-slate-800">{item.name}</span>
+                                    <span className="text-orange-600 font-semibold ml-2">${item.price}</span>
+                                  </div>
+                                  <button type="button" onClick={() => handleDeleteQuickItem(item.id)} className="text-slate-300 hover:text-rose-500 p-1">
+                                    <Trash2Icon className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right: Statistics & Bills */}
+                      <div className="lg:col-span-7 space-y-6">
+                        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex items-center space-x-2">
+                            <label className="text-xs font-bold text-slate-500 whitespace-nowrap">統計日期：</label>
+                            <select
+                              value={statsDateFilter}
+                              onChange={(e) => setStatsDateFilter(e.target.value)}
+                              className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-orange-500 font-semibold text-slate-700"
+                            >
+                              <option value="all">所有日期加總 (7/1-7/15)</option>
+                              {JULY_DATES.map(d => (
+                                <option key={d.dateStr} value={d.dateStr}>{d.display}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="relative flex-1 md:max-w-xs">
+                            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
+                              type="text"
+                              placeholder="搜尋姓名關鍵字..."
+                              value={searchUserQuery}
+                              onChange={(e) => setSearchUserQuery(e.target.value)}
+                              className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-orange-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Section A: Aggregated Items */}
+                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                          <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <h3 className="font-bold text-slate-900 text-base flex items-center space-x-2">
+                              <TrendingUpIcon className="h-5 w-5 text-orange-500" />
+                              <span>一、店家訂購品項總計 (依篩選)</span>
+                            </h3>
+                            <span className="text-xs font-semibold text-slate-400">
+                              {statsDateFilter === 'all' ? '所有天數累計' : JULY_DATES.find(d => d.dateStr === statsDateFilter)?.display}
+                            </span>
+                          </div>
+
+                          {itemStatistics.length === 0 ? (
+                            <p className="text-center py-8 text-xs text-slate-400">此篩選條件下目前尚無餐點訂購</p>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left text-sm text-slate-600">
+                                <thead className="text-xs text-slate-400 font-bold bg-slate-50">
+                                  <tr>
+                                    <th className="px-4 py-2.5 rounded-l-lg">品項名稱</th>
+                                    <th className="px-4 py-2.5 text-center">單價</th>
+                                    <th className="px-4 py-2.5 text-center">總數量</th>
+                                    <th className="px-4 py-2.5 text-right rounded-r-lg">小計金額</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                  {itemStatistics.map((stat, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                      <td className="px-4 py-3 font-bold text-slate-800">{stat.name}</td>
+                                      <td className="px-4 py-3 text-center font-semibold text-slate-500">${stat.unitPrice}</td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span className="px-2.5 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded-full">
+                                          {stat.totalQty} 份
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-extrabold text-slate-950">${stat.totalPrice}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Section B: Personal Billing */}
+                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                          <div className="border-b border-slate-100 pb-3">
+                            <h3 className="font-bold text-slate-900 text-base flex items-center space-x-2">
+                              <UsersIcon className="h-5 w-5 text-indigo-500" />
+                              <span>二、個人暑期午餐帳單金額總計</span>
+                            </h3>
+                            <p className="text-slate-400 text-[11px] mt-1">
+                              列出所有人的個人總金額。您可以點擊展開檢看每日詳細品項與備註。
+                            </p>
+                          </div>
+
+                          {personalBilling.length === 0 ? (
+                            <p className="text-center py-8 text-xs text-slate-400">查無相符的個人帳單紀錄</p>
+                          ) : (
+                            <div className="space-y-3">
+                              {personalBilling.map((bill, idx) => (
+                                <details key={idx} className="group border border-slate-100 rounded-xl hover:border-slate-200 transition-all">
+                                  <summary className="list-none flex items-center justify-between p-4 cursor-pointer select-none">
+                                    <div className="flex items-center space-x-2.5">
+                                      <ChevronRightIcon className="h-4 w-4 text-slate-400 group-open:rotate-90 transition-transform" />
+                                      <span className="font-bold text-slate-800 text-base">{bill.name}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-4">
+                                      <span className="text-xs text-slate-400 font-semibold">
+                                        點餐天數: {Object.keys(bill.dates).length} 天
+                                      </span>
+                                      <span className="text-base font-extrabold text-indigo-600">
+                                        總額: ${bill.totalSpent}
+                                      </span>
+                                    </div>
+                                  </summary>
+                                  
+                                  <div className="px-4 pb-4 pt-1 border-t border-slate-50 bg-slate-50/50 rounded-b-xl space-y-2.5">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">每日點餐詳細：</div>
+                                    {JULY_DATES.map(dateObj => {
+                                      const dateRecord = bill.dates[dateObj.dateStr];
+                                      if (!dateRecord) return null;
+                                      return (
+                                        <div key={dateObj.dateStr} className="flex justify-between items-start text-xs border-b border-slate-100 pb-2 last:border-none">
+                                          <div className="space-y-0.5">
+                                            <div className="font-bold text-slate-700">{dateObj.display}</div>
+                                            <div className="text-slate-600 text-xs">{dateRecord.description}</div>
+                                            {dateRecord.remarks && (
+                                              <div className="text-[10px] text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded inline-block mt-1">
+                                                💡 備註: {dateRecord.remarks}
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="font-extrabold text-slate-800">${dateRecord.cost}</div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </details>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Section C: Raw Orders */}
+                        <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                          <div className="border-b border-slate-100 pb-3">
+                            <h3 className="font-bold text-slate-900 text-base flex items-center space-x-2">
+                              <ShieldAlertIcon className="h-5 w-5 text-rose-500" />
+                              <span>三、所有訂單原始數據 (維護管理)</span>
+                            </h3>
+                          </div>
+
+                          {filteredOrders.length === 0 ? (
+                            <p className="text-center py-8 text-xs text-slate-400">目前尚無訂單原始明細</p>
+                          ) : (
+                            <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto pr-1">
+                              {filteredOrders.map((order) => (
+                                <div key={order.id} className="py-3.5 flex items-center justify-between text-xs hover:bg-slate-50 px-2 rounded-xl transition-all">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center space-x-2">
+                                      <span className="font-bold text-slate-800 text-sm">{order.name}</span>
+                                      <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-bold text-[10px]">
+                                        {JULY_DATES.find(d => d.dateStr === order.date)?.display || order.date}
+                                      </span>
+                                    </div>
+                                    <div className="text-slate-500 font-medium">
+                                      餐點：{order.items.map(i => `${i.name} (${i.qty}份)`).join(', ')}
+                                    </div>
+                                    {order.remarks && (
+                                      <div className="text-amber-600 text-[10px] italic">
+                                        備註: {order.remarks}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center space-x-4">
+                                    <span className="font-bold text-slate-800 text-sm">
+                                      ${order.items.reduce((s, i) => s + (i.price * i.qty), 0)}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setDeleteModalOrder(order)}
+                                      className="text-slate-300 hover:text-rose-500 p-1.5 hover:bg-rose-50 rounded transition-all"
+                                    >
+                                      <Trash2Icon className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+
+          <footer className="bg-slate-900 text-slate-400 text-center py-8 mt-12 border-t border-slate-800">
+            <div className="max-w-6xl mx-auto px-4 space-y-2">
+              <p className="text-sm font-semibold">暑期點餐系統 © 2026</p>
+              <p className="text-xs text-slate-500">專為 7/1 - 7/15 期間午餐統計而設計。資料庫即時更新，保障您的點餐完整性。</p>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
